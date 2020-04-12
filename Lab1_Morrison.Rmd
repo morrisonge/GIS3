@@ -1,0 +1,82 @@
+---
+title: "Lab1_Morrison"
+author: "Grant Morrison"
+date: "4/12/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Loading libraries
+```{r, message = FALSE}
+library(sf)
+library(tmap)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+Reading data from the internet using **sf** function `st_read`
+```{r}
+chicago <- st_read("https://data.cityofchicago.org/resource/igwz-8jzy.geojson")
+```
+
+
+Plotting geometry column of the chicago data set with `plot`
+```{r}
+plot(chicago$geometry)
+```
+
+
+Setting tmap mode to `"view"` with `tmap_mode` and plotting the community areas
+with `tm_shape` and `tm_borders`
+```{r}
+tmap_mode("view")
+tm_shape(chicago) +
+  tm_borders()
+```
+
+
+Using **tidyverse** function `filter` to get the Hyde Park community area
+```{r}
+hyde_park <- chicago %>% filter(community == "HYDE PARK")
+```
+
+
+
+Plotting the community areas with Hyde Park as blue with **tmap** functions
+```{r}
+tm_shape(chicago) +
+  tm_borders() +
+  tm_shape(hyde_park) +
+  tm_fill(col = "blue")
+```
+
+
+Computing centroids of Chicago community areas with `st_centroid`
+```{r, warning=FALSE}
+centroids <- st_centroid(chicago)
+```
+
+
+Ploting centroids in red, Chicago community areas, and Hyde Park
+in Blue with **tmap** functions
+```{r}
+tm_shape(chicago) +
+  tm_borders() +
+  tm_shape(hyde_park) +
+  tm_fill(col = "blue") +
+  tm_shape(centroids) +
+  tm_dots(col = "red")
+```
+
+
+
+
+
+
+
+
+
