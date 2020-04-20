@@ -2,7 +2,9 @@
 title: "Lab2_Morrison"
 author: "Grant Morrison"
 date: "4/18/2020"
-output: html_document
+output:
+  word_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -31,7 +33,7 @@ nyc <- geodaData::nyc_sf
 ## Summary Statistics
 
 
-##rentpct08** is the percentage of housing stock that is market rate rental units.
+**rentpct08** is the percentage of housing stock that is market rate rental units.
 `summary` gives basic summary statistics for the variable **rentpct08**
 ```{r}
 summary(nyc$rentpct08)
@@ -53,7 +55,6 @@ summary(nyc$hhsiz08)
 ```{r}
 sd(nyc$hhsiz08)
 ```
-
 
 ## Histograms
 
@@ -89,29 +90,3 @@ tm_shape(nyc) +
   tm_fill("hhsiz08", style = "quantile", palette = "Blues") +
   tm_borders() 
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
