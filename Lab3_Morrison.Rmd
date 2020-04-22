@@ -1,0 +1,158 @@
+---
+title: "Lab3_Morrison"
+author: "Grant Morrison"
+date: "4/22/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r, message=FALSE}
+library(sf)
+library(tidyverse)
+library(tmap)
+library(RSocrata)
+library(ggplot2)
+```
+
+
+Reading data from socrata portal on the Chicago Open Data Portal website. Data is crimes
+for the past year to date. `read.socrata` reads data from socrata data APIs on the web.
+```{r}
+crimes <- read.socrata("https://data.cityofchicago.org/resource/x2n5-8w5q.csv")
+```
+
+
+
+Reading the community area shapefile from the web with `st_read`
+```{r}
+chicago <- st_read("https://data.cityofchicago.org/resource/igwz-8jzy.geojson")
+```
+
+Plotting the Chicago community areas
+```{r}
+plot(chicago$geometry)
+```
+
+
+Checking the different types of crime with `unique`
+```{r}
+unique(crimes$X_primary_decsription)
+```
+
+
+Filtering out all crimes that are not homicides with `filter`.
+```{r}
+homicides <- crimes %>% filter(X_primary_decsription == "HOMICIDE")
+```
+
+Checking the number of homicides with `nrow`
+```{r}
+nrow(homicides)
+```
+
+
+Converting the data frame to **sf** with `st_as_sf` and setting the crs with `st_crs`
+```{r}
+homicide_points <- st_as_sf(homicides, coords = c("longitude","latitude"))
+st_crs(homicide_points) <- 4326
+```
+
+
+
+
+
+Changing the **tmap** mode to "view" for base map and interactivity
+```{r}
+tmap_mode("view")
+```
+
+
+
+Plotting the community areas and homicide points with **tmap** functions
+```{r}
+tm_shape(chicago) +
+  tm_borders() +
+  tm_shape(homicide_points) +
+  tm_dots(col = "red")
+```
+I will aggregate the points to communtiy areas in order to make choropleth map
+
+
+
+To start, I spatially join the community area identifier to the points.
+```{r, message = FALSE}
+comm.points <- st_join(homicide_points,chicago["area_num_1"])
+```
+
+
+**area_num_1** is a factor, so I change it to type integer with `as.integer` to avoid problems later.
+```{r}
+comm.points$area_num_1 <- as.integer(comm.points$area_num_1)
+chicago$area_num_1 <- as.integer(chicago$area_num_1)
+```
+
+Next, I set the geometry of the points to NULL for convenience in making the counts.
+```{r}
+st_geometry(comm.points) <- NULL
+```
+
+
+`count` creates counts of the number of points with the same integer for **area_num_1**.`head` gives the
+first few observations 
+```{r}
+homicide.cnts <- comm.points %>% count(area_num_1)
+head(homicide.cnts)
+```
+
+
+I change the names to something more meaningful with `rename`
+```{r}
+homicide.cnts <- homicide.cnts %>% rename(comm = area_num_1, homicide_count = n)
+head(homicide.cnts)
+```
+
+
+Now I join the counts to the original Chicago community area boundaries with `left_join`
+```{r}
+chicago <- left_join(chicago,homicide.cnts, by = c("area_num_1" = "comm"))
+```
+
+
+
+I plot the homicide counts for each community area with **tmap** functions
+```{r}
+tm_shape(chicago) +
+  tm_fill("homicide_count", style = "quantile", palette = c("blue","white","red")) +
+  tm_borders()
+```
+
+
+Here I assign 0 for missing values, so I can make a density plot. This is easily done with `is.na` and
+bracket notation.
+```{r}
+chicago$homicide_count[is.na(chicago$homicide_count)] <- 0
+```
+
+
+Lastly with **ggplot2**, I make a density plot to view the univariate distribution of homicide counts
+```{r}
+ggplot(chicago, aes(x=homicide_count)) +
+  geom_density()
+```
+
+
+
+
+
+
+
+
+
+
+
+
