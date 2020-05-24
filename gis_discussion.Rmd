@@ -1,0 +1,105 @@
+---
+title: "gis_discussion7"
+author: "Grant Morrison"
+date: "5/24/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+```{r, message = FALSE,warning=FALSE}
+#install geodaData to get county dataset
+remotes::install_github("spatialanalysis/geodaData")
+
+#loading libraries
+library(geodaData)
+library(tidyverse)
+library(sf)
+library(tmap)
+library(spData)
+
+#getting us county dataset
+us.counties <- geodaData::ncovr
+
+weighted_centroids <- function(polys, stateid,popvar){
+  #inputs: 
+  #  polys: sf dataframe
+  #  stateid: some state identifier can be name or id number
+  #  popvar: name of the popuation variable
+  #returns:
+  #  sf points
+  
+  #checking for sf object
+  if(!any(class(polys) == "sf")){
+    stop("This function only works for sf :( ")
+  }
+  
+  #computing centroids
+  centroids <- st_centroid(st_geometry(polys))
+  
+  #extracting centroid coordinates from sf point structure
+  cen_coords <- do.call(rbind, centroids) %>% 
+    as_tibble() %>% setNames(c("lon","lat"))
+  
+  #adding coordinates to the sf dataframe
+  polys["lon"] <- cen_coords["lon"]
+  polys["lat"] <- cen_coords["lat"]
+
+  #dropping geometry 
+  polys_df <- st_drop_geometry(polys)
+  
+  #getting state names or ids
+  states <- unique(polys_df[stateid])
+  
+  #creating empty vector to store lat/lon
+  longitude <- rep(NA, length(states))
+  latitude <- rep(NA, length(states))
+  
+  #computing the weight centroid for each state
+  for (i in 1:nrow(states)){
+    state_counties <- polys_df[which(polys_df[stateid] == states[i,]),]
+    w <- state_counties[popvar]
+    wx <- state_counties["lon"] * w
+    wy <- state_counties["lat"] * w
+    longitude[i] <- sum(wx) / sum(w)
+    latitude[i] <- sum(wy) / sum(w)
+  }
+  
+  #creating a dataframe
+  df <- data.frame(states,longitude,latitude)
+  
+  #converting the dataframe to sf
+  sf_pop_centroids <- st_as_sf(df, coords = c("longitude","latitude"))
+}
+
+#using function from above to compute pop weighted centroids
+pop_centroids <- weighted_centroids(us.counties,"STATE_NAME", "PO90")
+
+#getting state dataset so we dont have to aggregate the county one
+us_states <- spData::us_states
+
+#computing state centroids
+state_centroids <- st_centroid(st_geometry(us_states))
+
+
+#plotting pop-weight centroids and normal centoids
+tmap_mode("view")
+tm_shape(us_states) +
+  tm_borders() +
+  tm_shape(pop_centroids) +
+  tm_dots(col = "orange", size =.1) +
+  tm_shape(state_centroids) +
+  tm_dots(col = "red", size =.1)
+
+```
+
+
+
+
+
+
