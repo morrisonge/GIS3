@@ -1,0 +1,82 @@
+---
+title: "Lab 6 GIS3"
+author: "Grant Morrison"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+The data and some of the code were from the Urban Analytics workshop by Alex Singleton.
+The github link to this workshop can be found at [Urban Analytics](https://github.com/alexsingleton/urban_analytics)
+
+### Loading the libraries
+
+
+```{r}
+library(tmap)
+library(sf)
+```
+
+### Loading the data
+
+This data was created earlier in the lab, but we just load it here with `load` to keep things
+simpler and cleaner. I went through the whole lab, but I didn't want to have all of Dr. Singleton's code 
+copied into my lab on my repository. I shortened it to just loading the clusters and 
+mapping them.
+```{r}
+load("./data/cluster_7.Rdata")
+```
+
+The cluster_7 object contains a list of different outputs related to the cluster analysis- we can view these:
+
+```{r}
+str(cluster_7)
+```
+
+The cluster results can therefore be accessed as follows:
+
+```{r}
+lookup <- data.frame(cluster_7$cluster)
+lookup$OA <- rownames(lookup)
+colnames(lookup) <- c("K_7","OA")
+lookup$SUPER <- LETTERS[lookup$K_7]
+```
+
+We will also look at the distribution of these clusters:
+
+```{r}
+table(lookup$K_7)
+```
+
+To get the boundaries, we use `read_sf`, which also works on .geojson files.
+```{r}
+liverpool_sf = read_sf( "./data/Liverpool_OA_2011.geojson")
+```
+
+Here we merge the cluster data together with the boundary, by the OA code.
+
+```{r}
+liverpool_sf <- merge(liverpool_sf, lookup, by.x="oa_code",by.y="OA")
+```
+
+### Mapping the Clusters
+
+
+To map the clusters, we use **tmap**. First we set `tmap_mode("view")`. Then we use
+`tm_fill` to map the cluster with palette **Set2**. The we add black borders with
+`tm_borders`. With `tm_layout`, we set the title to be "Cluster Map Liverpool"
+```{r}
+tmap_mode("view")
+tm_shape(liverpool_sf) + 
+  tm_fill("SUPER", palette = "Set2") +
+  tm_borders(col = "black",alpha =.5) +
+  tm_layout(title = "Cluster Map Liverpool")
+```
+
+The interpretation for this map is fairly difficult as the clustering is done with many variables. The
+variables used are categorized as demographic, socioeconomic, and housing. SMR illness rates are computed to add to 
+the cluster analysis. Each variable is standardized to a range between 0 and 1, so that each variable
+affects the cluster analysis. The cluster groups are spherical clusters that closest similarity
+with respect to the input variables. I am not familiar with Liverpool as a city, but it looks like group B is most
+common throughout the map.
+
